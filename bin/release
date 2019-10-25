@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# bin/release <build-dir>
+set -e
+
+BUILD_DIR=$(cd "$1/" && pwd)
+BUILDPACK_DIR=$(dirname $(readlink -f ${BASH_SOURCE%/*}))
+
+cp "${BUILDPACK_DIR}/rclone.sh" "${BUILD_DIR}/.rclone.sh"
+chmod +x "${BUILD_DIR}/.rclone.sh"
+
+cat <<EOF
+---
+default_process_types:
+  web: /home/vcap/app/.rclone.sh
+EOF
+
