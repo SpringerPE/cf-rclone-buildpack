@@ -134,6 +134,7 @@ launch() {
 run_rclone() {
     local cmd="rclone --config "${RCLONE_CONFIG}" rcd --rc-web-gui --rc-addr :${PORT}"
 
+    mkdir -p "${AUTH_ROOT}"
     if [ -z "${AUTH_PASSWORD}" ]
     then
         AUTH_PASSWORD="$(random_string)"
