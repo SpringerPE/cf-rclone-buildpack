@@ -7,15 +7,18 @@ ROOT="/home/vcap"
 export APP_ROOT="${ROOT}/app"
 export AUTH_ROOT="${ROOT}/auth"
 export APP_CONFIG="${ROOT}/.config/rclone/rclone.conf"
-export RCLONE_RC_ADDR=":${PORT}"
 
 ### Configuration env vars
 # https://rclone.org/docs/#environment-variables
-export GCS_LOCATION="${GCS_LOCATION:-europe-west4}"
+
+export RCLONE_RC_ADDR=":${PORT}"
 export AUTO_START_ACTIONS="${AUTO_START_ACTIONS:-$APP_ROOT/post-start.sh}"
 export BINDING_NAME="${BINDING_NAME:-}"
+export GCS_LOCATION="${GCS_LOCATION:-europe-west4}"
+
 export AUTH_USER="${AUTH_USER:-admin}"
 export AUTH_PASSWORD="${AUTH_PASSWORD:-}"
+
 export RCLONE_RC_SERVE="${RCLONE_RC_SERVE:-true}"
 export RCLONE_CONFIG="${RCLONE_CONFIG:-$APP_ROOT/rclone.conf}"
 
@@ -138,8 +141,8 @@ launch() {
             (
                 echo ">> Launching post-start pid=$$: $@"
                 {
-                    nohup ${AUTO_START_ACTIONS} > "${AUTO_START_ACTIONS}.log"
-                }
+                    nohup ${AUTO_START_ACTIONS}
+                } > "${AUTO_START_ACTIONS}.log" 2>&1
             ) &
         fi
     fi
