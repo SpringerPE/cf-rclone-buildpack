@@ -12,7 +12,7 @@ source ${BUILDPACK_DIR}/rclone-parameters.sh
 
 [ -f "${BUILD_DIR}/runtime.txt" ] && RCLONE_VERSION=$(grep -v '^#' "${BUILD_DIR}/runtime.txt" | head -n1)
 
-echo "-----> Symlinking properties and default configuration"
+echo "-----> Setting up environment profile"
 mkdir -p "$BUILD_DIR/.profile.d"
 cat <<EOF > "$BUILD_DIR/.profile.d/0010_rclone.sh"
 export RCLONE_VERSION=${RCLONE_VERSION}
