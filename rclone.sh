@@ -7,15 +7,17 @@ ROOT="/home/vcap"
 export APP_ROOT="${ROOT}/app"
 export AUTH_ROOT="${ROOT}/auth"
 export APP_CONFIG="${ROOT}/.config/rclone/rclone.conf"
+export RCLONE_RC_ADDR=":${PORT}"
 
 ### Configuration env vars
-
+# https://rclone.org/docs/#environment-variables
+export GCS_LOCATION="${GCS_LOCATION:-europe-west4}"
+export AUTO_START_ACTIONS="${AUTO_START_ACTIONS:-$APP_ROOT/post-start.sh}"
+export BINDING_NAME="${BINDING_NAME:-}"
 export AUTH_USER="${AUTH_USER:-admin}"
 export AUTH_PASSWORD="${AUTH_PASSWORD:-}"
-export SERVE="${SERVE:-1}"
+export RCLONE_RC_SERVE="${RCLONE_RC_SERVE:-true}"
 export RCLONE_CONFIG="${RCLONE_CONFIG:-$APP_ROOT/rclone.conf}"
-export GCS_LOCATION="${GCS_LOCATION:-europe-west4}"
-export BINDING_NAME="${BINDING_NAME:-}"
 
 ###
 
@@ -114,25 +116,41 @@ random_string() {
     cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-32} | head -n 1
 }
 
-# exec process in bg or fg
+# exec process rclone
 launch() {
     local pid
     local rvalue
     (
-        echo "Launching pid=$$: $@"
+        echo ">> Launching pid=$$: $@"
         {
             exec $@  2>&1;
         }
     ) &
     pid=$!
+    if [ -r "${AUTO_START_ACTIONS}" ]
+    then
+        [ -x "${AUTO_START_ACTIONS}" ] || chmod a+x "${AUTO_START_ACTIONS}"
+        sleep 20
+        if ! ps -p ${pid} >/dev/null 2>&1
+        then
+            echo ">> Error launching: '$@'"
+        else
+            (
+                echo ">> Launching post-start pid=$$: $@"
+                {
+                    nohup ${AUTO_START_ACTIONS} > "${AUTO_START_ACTIONS}.log"
+                }
+            ) &
+        fi
+    fi
     wait ${pid} 2>/dev/null
     rvalue=$?
-    echo "Finish pid=${pid}: ${rvalue}"
+    echo ">> Finish pid=${pid}: ${rvalue}"
     return ${rvalue}
 }
 
 run_rclone() {
-    local cmd="rclone --config "${RCLONE_CONFIG}" rcd --rc-web-gui --rc-addr :${PORT}"
+    local cmd="rclone --config "${RCLONE_CONFIG}" rcd --rc-web-gui --rc-addr ${RCLONE_RC_ADDR}"
 
     mkdir -p "${AUTH_ROOT}"
     if [ -z "${AUTH_PASSWORD}" ]
@@ -149,10 +167,22 @@ run_rclone() {
     mkdir -p $(dirname "${APP_CONFIG}")
     ln -sf "${RCLONE_CONFIG}" "${APP_CONFIG}"
 
-    [ "x${SERVE}" == "x1" ] && cmd="${cmd} --rc-serve"
+    [ "x${RCLONE_RC_SERVE}" == "xtrue" ] && cmd="${cmd} --rc-serve"
     get_bucket_vcap_service "${RCLONE_CONFIG}" "${BINDING_NAME}"
     launch ${cmd} --rc-user "${AUTH_USER}" --rc-pass "${AUTH_PASSWORD}" $@
 }
 
 # run
-run_rclone $@
+if [ -n "${CF_INSTANCE_INDEX}" ]
+then
+    if [ ${CF_INSTANCE_INDEX} -eq 0 ]
+    then
+        run_rclone $@
+    else
+        echo "ERROR, no more than 1 instance allowed with this buildpack!"
+        exit 1
+    fi
+else
+    run_rclone $@
+fi
+
