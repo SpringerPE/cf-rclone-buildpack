@@ -153,7 +153,7 @@ launch() {
 }
 
 run_rclone() {
-    local cmd="rclone --config "${RCLONE_CONFIG}" rcd --rc-web-gui --rc-addr ${RCLONE_RC_ADDR}"
+    local cmd="rclone -vvv --config "${RCLONE_CONFIG}" rcd --rc-web-gui --rc-addr ${RCLONE_RC_ADDR}"
 
     mkdir -p "${AUTH_ROOT}"
     if [ -z "${AUTH_PASSWORD}" ]
