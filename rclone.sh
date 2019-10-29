@@ -6,8 +6,13 @@ set -euo pipefail
 ROOT="/home/vcap"
 export APP_ROOT="${ROOT}/app"
 export AUTH_ROOT="${ROOT}/auth"
+export APP_CONFIG="${ROOT}/.config/rclone/rclone.conf"
+
+### Configuration env vars
+
 export AUTH_USER="${AUTH_USER:-admin}"
 export AUTH_PASSWORD="${AUTH_PASSWORD:-}"
+export SERVE="${SERVE:-1}"
 export RCLONE_CONFIG="${RCLONE_CONFIG:-$APP_ROOT/rclone.conf}"
 export GCS_LOCATION="${GCS_LOCATION:-europe-west4}"
 export BINDING_NAME="${BINDING_NAME:-}"
@@ -127,6 +132,8 @@ launch() {
 }
 
 run_rclone() {
+    local cmd="rclone --config "${RCLONE_CONFIG}" rcd --rc-web-gui --rc-addr :${PORT}"
+
     if [ -z "${AUTH_PASSWORD}" ]
     then
         AUTH_PASSWORD="$(random_string)"
@@ -138,8 +145,12 @@ run_rclone() {
     else
         touch "${RCLONE_CONFIG}"
     fi
+    mkdir -p $(dirname "${APP_CONFIG}")
+    ln -sf "${RCLONE_CONFIG}" "${APP_CONFIG}"
+
+    [ "x${SERVE}" == "x1" ] && cmd="${cmd} --rc-serve"
     get_bucket_vcap_service "${RCLONE_CONFIG}" "${BINDING_NAME}"
-    launch rclone --config "${RCLONE_CONFIG}" rcd --rc-web-gui --rc-addr :${PORT} --rc-user "${AUTH_USER}" --rc-pass "${AUTH_PASSWORD}" $@
+    launch ${cmd} --rc-user "${AUTH_USER}" --rc-pass "${AUTH_PASSWORD}" $@
 }
 
 # run
