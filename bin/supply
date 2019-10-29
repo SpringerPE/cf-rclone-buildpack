@@ -10,33 +10,34 @@ DEPS_IDX="${4}"
 # dependencies paths
 RCLONE_DIR="${DEPS_DIR}/${DEPS_IDX}/rclone"
 BUILDPACK_DIR=$(dirname $(readlink -f ${BASH_SOURCE%/*}))
-source ${BUILDPACK_DIR}/rclone-parameters.sh
 
 if [ -f "${BUILD_DIR}/runtime.txt" ]
 then
-    RCLONE_VERSION=$((grep -v '^#' "${BUILD_DIR}/runtime.txt" || true) | head -n1)
-    if [ -z "${RCLONE_VERSION}" ]
+    VERSION_RCLONE=$((grep -v '^#' "${BUILD_DIR}/runtime.txt" || true) | head -n1)
+    if [ -z "${VERSION_RCLONE}" ]
     then
         echo "ERROR> runtime.txt found but no version specified!"
         exit 1
     fi
 fi
-RCLONE_DOWNLOAD_URL="https://downloads.rclone.org/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip"
-if [ -f "${CACHE_DIR}/rclone-${RCLONE_VERSION}.zip" ]
+
+source ${BUILDPACK_DIR}/rclone-parameters.sh
+
+if [ -f "${CACHE_DIR}/rclone-${VERSION_RCLONE}.zip" ]
 then
-    echo "-----> Using rclone ${RCLONE_VERSION} from cache"
+    echo "-----> Using rclone ${VERSION_RCLONE} from cache"
 else
-    echo "-----> Downloading rclone : ${RCLONE_DOWNLOAD_URL}"
-    if ! wget -nv "${RCLONE_DOWNLOAD_URL}" -O "${CACHE_DIR}/rclone-${RCLONE_VERSION}.zip" 2>&1 | sed 's/^/       /'
+    echo "-----> Downloading rclone : ${DOWNLOAD_URL_RCLONE}"
+    if ! wget -nv "${DOWNLOAD_URL_RCLONE}" -O "${CACHE_DIR}/rclone-${VERSION_RCLONE}.zip" 2>&1 | sed 's/^/       /'
     then
-        echo "ERROR> rclone version ${RCLONE_VERSION} not found, URL=${RCLONE_DOWNLOAD_URL}"
+        echo "ERROR> rclone version ${VERSION_RCLONE} not found, URL=${DOWNLOAD_URL_RCLONE}"
         exit 1
     fi
 fi
 
-echo "-----> Installing Rclone"
+echo "-----> Installing rclone"
 mkdir -p "${RCLONE_DIR}/bin"
-unzip -q "${CACHE_DIR}/rclone-${RCLONE_VERSION}.zip" -d "${RCLONE_DIR}" "*/rclone"
-chmod +x "${RCLONE_DIR}/rclone-v${RCLONE_VERSION}-linux-amd64/rclone"
-cd "${RCLONE_DIR}/bin" && ln -sf "../rclone-v${RCLONE_VERSION}-linux-amd64/rclone"
+unzip -q "${CACHE_DIR}/rclone-${VERSION_RCLONE}.zip" -d "${RCLONE_DIR}" "*/rclone"
+chmod +x "${RCLONE_DIR}/rclone-v${VERSION_RCLONE}-linux-amd64/rclone"
+cd "${RCLONE_DIR}/bin" && ln -sf "../rclone-v${VERSION_RCLONE}-linux-amd64/rclone"
 
