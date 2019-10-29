@@ -16,6 +16,7 @@ echo "-----> Setting up environment profile"
 mkdir -p "$BUILD_DIR/.profile.d"
 cat <<EOF > "$BUILD_DIR/.profile.d/0010_rclone.sh"
 export VERSION_RCLONE=${VERSION_RCLONE}
+export RCLONE_RC_ADDR=":\$PORT"
 export PATH="\$PATH:/home/vcap/deps/${DEPS_IDX}/rclone/bin"
 EOF
 
