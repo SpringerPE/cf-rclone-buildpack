@@ -260,7 +260,7 @@ run_rclone() {
     fi
     if ! generate_rclone_config_from_vcap_services "${RCLONE_CONFIG}" "${BINDING_NAME}"
     then
-        echo ">> Error, service '${binding_name}' not found!" >&2
+        echo ">> Error, service '${BINDING_NAME}' not found!" >&2
         return 1
     fi
     if [ "x${RCLONE_RC_SERVE}" == "xtrue" ]
