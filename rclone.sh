@@ -191,9 +191,12 @@ launch() {
     then
         (
             {
-                echo ">> Launching sync job '${SYNC_SOURCE_SERVICE}:${src_bucket}' -> '${SYNC_DESTINATION_SERVICE}:${dst_bucket}', pid=$$"
-                $cmd rc sync/sync srcFs="${SYNC_SOURCE_SERVICE}:${src_bucket}" dstFs="${SYNC_DESTINATION_SERVICE}:${dst_bucket}"
-                sleep ${SYNC_TIMER}
+                while true
+                do
+                    echo ">> Launching sync job '${SYNC_SOURCE_SERVICE}:${src_bucket}' -> '${SYNC_DESTINATION_SERVICE}:${dst_bucket}', pid=$$"
+                    $cmd -vv rc sync/sync srcFs="${SYNC_SOURCE_SERVICE}:${src_bucket}" dstFs="${SYNC_DESTINATION_SERVICE}:${dst_bucket}"
+                    sleep ${SYNC_TIMER}
+                done
             }
         ) &
     fi
@@ -205,7 +208,7 @@ launch() {
 
 
 run_rclone() {
-    local cmd="rclone -vv --config "${RCLONE_CONFIG}" --rc-addr ${RCLONE_RC_ADDR}"
+    local cmd="rclone -v --config "${RCLONE_CONFIG}" --rc-addr ${RCLONE_RC_ADDR}"
 
     mkdir -p "${AUTH_ROOT}"
     if [ -z "${AUTH_PASSWORD}" ]
