@@ -228,9 +228,9 @@ run_rclone() {
 
     if [ "x${RCLONE_RC_SERVE}" == "xtrue" ]
     then
-        launch ${cmd} rcd --rc-web-gui --rc-serve $@
+        launch "${cmd}" rcd --rc-web-gui --rc-serve $@
     else
-        launch ${cmd} rcd --rc-web-gui $@
+        launch "${cmd}" rcd --rc-web-gui $@
     fi
 }
 
