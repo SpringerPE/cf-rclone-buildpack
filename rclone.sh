@@ -168,23 +168,23 @@ launch() {
     then
         echo ">> Error, cannot find bucket on service: ${SYNC_SOURCE_SERVICE}"
         return 1
-    if
+    fi
     if [ -n "${SYNC_DESTINATION_SERVICE}" ] && ! dst_bucket=$(get_bucket_from_service "${SYNC_DESTINATION_SERVICE}")
     then
-        echo ">> Error, cannot find bucket on service: ${SYNC_SOURCE_SERVICE}"
+        echo ">> Error, cannot find bucket on service: ${SYNC_DESTINATION_SERVICE}"
         return 1
-    if
+    fi
     if [ -r "${AUTO_START_ACTIONS}" ]
     then
         [ -x "${AUTO_START_ACTIONS}" ] || chmod a+x "${AUTO_START_ACTIONS}"
         (
-            echo ">> Launching post-start pid=$$: $@"
             {
+                echo ">> Launching post-start pid=$$: $@"
                 export SYNC_SOURCE_BUCKET="${src_bucket}"
                 export SYNC_DESTINATION_BUCKET="${dst_bucket}"
                 export RCLONE="$cmd"
-                nohup ${AUTO_START_ACTIONS}
-            } > "${AUTO_START_ACTIONS}.log" 2>&1
+                ${AUTO_START_ACTIONS}
+            }
         ) &
     elif [ -n "${dst_bucket}" ] && [ -n "${src_bucket}" ]
     then
@@ -194,7 +194,7 @@ launch() {
                 $cmd rc sync/sync srcFs="${SYNC_SOURCE_SERVICE}:${src_bucket}" dstFs="${SYNC_DESTINATION_SERVICE}:${dst_bucket}"
                 sleep ${SYNC_TIMER}
             }
-        )
+        ) &
     fi
     wait ${pid} 2>/dev/null
     rvalue=$?
