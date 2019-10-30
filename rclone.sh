@@ -15,6 +15,9 @@ export RCLONE_RC_ADDR=":${PORT}"
 export AUTO_START_ACTIONS="${AUTO_START_ACTIONS:-$APP_ROOT/post-start.sh}"
 export BINDING_NAME="${BINDING_NAME:-}"
 export GCS_LOCATION="${GCS_LOCATION:-europe-west4}"
+export SYNC_SOURCE_SERVICE="${SYNC_SOURCE_SERVICE:-}"
+export SYNC_DESTINATION_SERVICE="${SYNC_DESTINATION_SERVICE:-}"
+export SYNC_TIMER="${SYNC_TIMER:-1200}"
 
 export AUTH_USER="${AUTH_USER:-admin}"
 export AUTH_PASSWORD="${AUTH_PASSWORD:-}"
@@ -82,7 +85,7 @@ location = "+ $l +"
 "' <<<"${services}" >> ${config}
 }
 
-get_bucket_vcap_service() {
+generate_rclone_config_from_vcap_services() {
     local rconfig="${1}"
     local binding_name="${2}"
     local service=""
@@ -115,36 +118,83 @@ get_bucket_vcap_service() {
     fi
 }
 
+get_bucket_from_service() {
+    local s="${1}"
+    local services="${2}"
+
+    local bucket=""
+    local rvalue=0
+
+    # first, try GCS style
+    bucket=$(jq -r -e --arg s "${s}" '.[][] | select(.name == $s) | .credentials.bucket_name' <<<"${services}")
+    rvalue=$?
+    # if empty, try S3
+    if [ -z "${bucket}" ] || [ ${rvalue} -ne 0 ]
+    then
+        bucket=$(jq -r -e --arg s "${s}" '.[][] | select(.name == $s) | .credentials.BUCKET_NAME' <<<"${services}")
+        rvalue=$?
+    fi
+    echo $bucket
+    return $rvalue
+}
+
+
 random_string() {
     cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-32} | head -n 1
 }
 
 # exec process rclone
 launch() {
+    local cmd="${1}"
+
     local pid
     local rvalue
+    local src_bucket=""
+    local dst_bucket=""
     (
-        echo ">> Launching pid=$$: $@"
+        echo ">> Launching pid=$$: $cmd $@"
         {
-            exec $@  2>&1;
+            exec $cmd $@
         }
     ) &
     pid=$!
+    sleep 20
+    if ! ps -p ${pid} >/dev/null 2>&1
+    then
+        echo ">> Error launching: '$cmd $@'"
+        return 1
+    fi
+    if [ -n "${SYNC_SOURCE_SERVICE}" ] && ! src_bucket=$(get_bucket_from_service "${SYNC_SOURCE_SERVICE}")
+    then
+        echo ">> Error, cannot find bucket on service: ${SYNC_SOURCE_SERVICE}"
+        return 1
+    if
+    if [ -n "${SYNC_DESTINATION_SERVICE}" ] && ! dst_bucket=$(get_bucket_from_service "${SYNC_DESTINATION_SERVICE}")
+    then
+        echo ">> Error, cannot find bucket on service: ${SYNC_SOURCE_SERVICE}"
+        return 1
+    if
     if [ -r "${AUTO_START_ACTIONS}" ]
     then
         [ -x "${AUTO_START_ACTIONS}" ] || chmod a+x "${AUTO_START_ACTIONS}"
-        sleep 20
-        if ! ps -p ${pid} >/dev/null 2>&1
-        then
-            echo ">> Error launching: '$@'"
-        else
-            (
-                echo ">> Launching post-start pid=$$: $@"
-                {
-                    nohup ${AUTO_START_ACTIONS}
-                } > "${AUTO_START_ACTIONS}.log" 2>&1
-            ) &
-        fi
+        (
+            echo ">> Launching post-start pid=$$: $@"
+            {
+                export SYNC_SOURCE_BUCKET="${src_bucket}"
+                export SYNC_DESTINATION_BUCKET="${dst_bucket}"
+                export RCLONE="$cmd"
+                nohup ${AUTO_START_ACTIONS}
+            } > "${AUTO_START_ACTIONS}.log" 2>&1
+        ) &
+    elif [ -n "${dst_bucket}" ] && [ -n "${src_bucket}" ]
+    then
+        (
+            {
+                echo ">> Launching sync job '${SYNC_SOURCE_SERVICE}:${src_bucket}' -> '${SYNC_DESTINATION_SERVICE}:${dst_bucket}', pid=$$"
+                $cmd rc sync/sync srcFs="${SYNC_SOURCE_SERVICE}:${src_bucket}" dstFs="${SYNC_DESTINATION_SERVICE}:${dst_bucket}"
+                sleep ${SYNC_TIMER}
+            }
+        )
     fi
     wait ${pid} 2>/dev/null
     rvalue=$?
@@ -152,8 +202,9 @@ launch() {
     return ${rvalue}
 }
 
+
 run_rclone() {
-    local cmd="rclone -vvv --config "${RCLONE_CONFIG}" rcd --rc-web-gui --rc-addr ${RCLONE_RC_ADDR}"
+    local cmd="rclone -vv --config "${RCLONE_CONFIG}" --rc-addr ${RCLONE_RC_ADDR}"
 
     mkdir -p "${AUTH_ROOT}"
     if [ -z "${AUTH_PASSWORD}" ]
@@ -161,6 +212,8 @@ run_rclone() {
         AUTH_PASSWORD="$(random_string)"
         echo "* Generated random password for user ${AUTH_USER}: '${AUTH_PASSWORD}'"
     fi
+    cmd="${cmd} --rc-user ${AUTH_USER} --rc-pass ${AUTH_PASSWORD}"
+
     if [ -r "${RCLONE_CONFIG}" ]
     then
         echo >> "${RCLONE_CONFIG}"
@@ -170,9 +223,14 @@ run_rclone() {
     mkdir -p $(dirname "${APP_CONFIG}")
     ln -sf "${RCLONE_CONFIG}" "${APP_CONFIG}"
 
-    [ "x${RCLONE_RC_SERVE}" == "xtrue" ] && cmd="${cmd} --rc-serve"
-    get_bucket_vcap_service "${RCLONE_CONFIG}" "${BINDING_NAME}"
-    launch ${cmd} --rc-user "${AUTH_USER}" --rc-pass "${AUTH_PASSWORD}" $@
+    generate_rclone_config_from_vcap_services "${RCLONE_CONFIG}" "${BINDING_NAME}"
+
+    if [ "x${RCLONE_RC_SERVE}" == "xtrue" ]
+    then
+        launch ${cmd} rcd --rc-web-gui --rc-serve $@
+    else
+        launch ${cmd} rcd --rc-web-gui $@
+    fi
 }
 
 # run
