@@ -7,6 +7,7 @@ ROOT="/home/vcap"
 export APP_ROOT="${ROOT}/app"
 export AUTH_ROOT="${ROOT}/auth"
 export APP_CONFIG="${ROOT}/.config/rclone/rclone.conf"
+export APP_VCAP_SERVICES="${APP_ROOT}/VCAP_SERVICES"
 
 ### Configuration env vars
 # https://rclone.org/docs/#environment-variables
@@ -102,7 +103,7 @@ generate_rclone_config_from_vcap_services() {
                 set_s3_rclone_config "${rconfig}" "${service}"
             fi
         else
-            echo "* Error, service '${binding_name}' not found!"
+            return 1
         fi
     else
         service=$(get_s3_service)
@@ -116,6 +117,7 @@ generate_rclone_config_from_vcap_services() {
             set_gcs_rclone_config "${rconfig}" "${service}"
         fi
     fi
+    return 0
 }
 
 get_bucket_from_service() {
@@ -143,6 +145,28 @@ random_string() {
     cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-32} | head -n 1
 }
 
+
+merge_vcap_services_from_file() {
+    local f="${1}"
+    local tempf
+
+    if [ -r "${f}"]
+    then
+        if jq type <<<$(<"${f}") > /dev/null 2>&1
+        then
+            tempf=$(mktemp)
+            echo "${VCAP_SERVICES}" > ${tempf}
+            jq -s '{"google-storage": ((.[0]."google-storage" + .[1]."google-storage") // []), "aws-s3": ((.[0]."aws-s3" + .[1]."aws-s3") // [])  }' "${f}" "${tempf}"
+            rm -f ${tempf}
+         else
+            return 1
+         fi
+    else
+        echo "${VCAP_SERVICES}"
+    fi
+    return 0
+}
+
 # exec process rclone
 launch() {
     local cmd="${1}"
@@ -162,17 +186,17 @@ launch() {
     sleep 20
     if ! ps -p ${pid} >/dev/null 2>&1
     then
-        echo ">> Error launching: '$cmd $@'"
+        echo ">> Error launching: '$cmd $@'"  >&2
         return 1
     fi
     if [ -n "${SYNC_SOURCE_SERVICE}" ] && ! src_bucket=$(get_bucket_from_service "${SYNC_SOURCE_SERVICE}" "${VCAP_SERVICES}")
     then
-        echo ">> Error, cannot find bucket on service: ${SYNC_SOURCE_SERVICE}"
+        echo ">> Error, cannot find bucket on service: ${SYNC_SOURCE_SERVICE}"  >&2
         return 1
     fi
     if [ -n "${SYNC_DESTINATION_SERVICE}" ] && ! dst_bucket=$(get_bucket_from_service "${SYNC_DESTINATION_SERVICE}" "${VCAP_SERVICES}")
     then
-        echo ">> Error, cannot find bucket on service: ${SYNC_DESTINATION_SERVICE}"
+        echo ">> Error, cannot find bucket on service: ${SYNC_DESTINATION_SERVICE}"  >&2
         return 1
     fi
     if [ -r "${AUTO_START_ACTIONS}" ]
@@ -229,8 +253,16 @@ run_rclone() {
     mkdir -p $(dirname "${APP_CONFIG}")
     ln -sf "${RCLONE_CONFIG}" "${APP_CONFIG}"
 
-    generate_rclone_config_from_vcap_services "${RCLONE_CONFIG}" "${BINDING_NAME}"
-
+    if ! VCAP_SERVICES=$(merge_vcap_services_from_file "${APP_VCAP_SERVICES}")
+    then
+        echo ">> Error, ${APP_VCAP_SERVICES} is not a valid json file!" >&2
+        return 1
+    fi
+    if ! generate_rclone_config_from_vcap_services "${RCLONE_CONFIG}" "${BINDING_NAME}"
+    then
+        echo ">> Error, service '${binding_name}' not found!" >&2
+        return 1
+    fi
     if [ "x${RCLONE_RC_SERVE}" == "xtrue" ]
     then
         launch "${cmd}" rcd --rc-web-gui --rc-serve $@
@@ -247,7 +279,7 @@ then
         run_rclone $@
         exit $?
     else
-        echo "ERROR, no more than 1 instance allowed with this buildpack!"
+        echo "ERROR, no more than 1 instance allowed with this buildpack!" >&2
         exit 1
     fi
 else
