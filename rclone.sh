@@ -156,7 +156,7 @@ launch() {
         echo ">> Launching pid=$$: $cmd $@"
         {
             exec $cmd $@
-        }
+        } 2>&1
     ) &
     pid=$!
     sleep 20
@@ -184,6 +184,7 @@ launch() {
                 export SYNC_SOURCE_BUCKET="${src_bucket}"
                 export SYNC_DESTINATION_BUCKET="${dst_bucket}"
                 export RCLONE="$cmd"
+                sleep 1
                 ${AUTO_START_ACTIONS}
             }
         ) &
@@ -194,6 +195,7 @@ launch() {
                 while true
                 do
                     echo ">> Launching sync job '${SYNC_SOURCE_SERVICE}:${src_bucket}' -> '${SYNC_DESTINATION_SERVICE}:${dst_bucket}', pid=$$"
+                    sleep 1
                     $cmd -vv rc sync/sync srcFs="${SYNC_SOURCE_SERVICE}:${src_bucket}" dstFs="${SYNC_DESTINATION_SERVICE}:${dst_bucket}"
                     sleep ${SYNC_TIMER}
                 done
