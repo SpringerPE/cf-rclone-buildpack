@@ -146,6 +146,7 @@ random_string() {
 # exec process rclone
 launch() {
     local cmd="${1}"
+    shift
 
     local pid
     local rvalue
@@ -239,11 +240,13 @@ then
     if [ ${CF_INSTANCE_INDEX} -eq 0 ]
     then
         run_rclone $@
+        exit $?
     else
         echo "ERROR, no more than 1 instance allowed with this buildpack!"
         exit 1
     fi
 else
     run_rclone $@
+    exit $?
 fi
 
