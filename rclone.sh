@@ -165,12 +165,12 @@ launch() {
         echo ">> Error launching: '$cmd $@'"
         return 1
     fi
-    if [ -n "${SYNC_SOURCE_SERVICE}" ] && ! src_bucket=$(get_bucket_from_service "${SYNC_SOURCE_SERVICE}")
+    if [ -n "${SYNC_SOURCE_SERVICE}" ] && ! src_bucket=$(get_bucket_from_service "${SYNC_SOURCE_SERVICE}" "${VCAP_SERVICES}")
     then
         echo ">> Error, cannot find bucket on service: ${SYNC_SOURCE_SERVICE}"
         return 1
     fi
-    if [ -n "${SYNC_DESTINATION_SERVICE}" ] && ! dst_bucket=$(get_bucket_from_service "${SYNC_DESTINATION_SERVICE}")
+    if [ -n "${SYNC_DESTINATION_SERVICE}" ] && ! dst_bucket=$(get_bucket_from_service "${SYNC_DESTINATION_SERVICE}" "${VCAP_SERVICES}")
     then
         echo ">> Error, cannot find bucket on service: ${SYNC_DESTINATION_SERVICE}"
         return 1
