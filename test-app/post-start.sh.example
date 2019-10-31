@@ -1,0 +1,11 @@
+#!/bin/bash
+# $RCLONE is defined env variable, just use it to execute commands
+
+# Example command
+$RCLONE rc core/version
+
+# Sync these 2 buckets
+#$RCLONE -vv rc sync/sync srcFs=s3-service:bucket1 dstFs=gcs-service:bucket2
+
+# alternative way to do it (aysnc == true)
+#$RCLONE rc sync/sync  --json '{ "srcFs": "s3-service:bucket1", "dstFs": "gcs-service:bucket2", "_async": true }'
