@@ -16,9 +16,13 @@ export RCLONE_RC_ADDR=":${PORT}"
 export AUTO_START_ACTIONS="${AUTO_START_ACTIONS:-$APP_ROOT/post-start.sh}"
 export BINDING_NAME="${BINDING_NAME:-}"
 export GCS_LOCATION="${GCS_LOCATION:-europe-west4}"
-export SYNC_SOURCE_SERVICE="${SYNC_SOURCE_SERVICE:-}"
-export SYNC_DESTINATION_SERVICE="${SYNC_DESTINATION_SERVICE:-}"
-export SYNC_TIMER="${SYNC_TIMER:-1200}"
+
+export CLONE_SOURCE_SERVICE="${CLONE_SOURCE_SERVICE:-}"
+export CLONE_SOURCE_BUCKET="${CLONE_SOURCE_BUCKET:-}"
+export CLONE_DESTINATION_SERVICE="${CLONE_DESTINATION_SERVICE:-}"
+export CLONE_DESTINATION_BUCKET="${CLONE_DESTINATION_BUCKET:-}"
+export CLONE_TIMER="${CLONE_TIMER:-0}"
+export CLONE_MODE="${CLONE_MODE:-copy}"
 
 export AUTH_USER="${AUTH_USER:-admin}"
 export AUTH_PASSWORD="${AUTH_PASSWORD:-}"
@@ -174,8 +178,23 @@ launch() {
 
     local pid
     local rvalue
-    local src_bucket=""
-    local dst_bucket=""
+
+    if [ -n "${CLONE_SOURCE_SERVICE}" ] && ! CLONE_SOURCE_BUCKET=${CLONE_SOURCE_BUCKET:-$(get_bucket_from_service "${CLONE_SOURCE_SERVICE}" "${VCAP_SERVICES}")}
+    then
+        echo ">> Error, cannot find bucket on service: ${CLONE_SOURCE_SERVICE}"  >&2
+        return 1
+    fi
+    if [ -n "${CLONE_DESTINATION_SERVICE}" ] && ! CLONE_DESTINATION_BUCKET=${CLONE_DESTINATION_BUCKET:-$(get_bucket_from_service "${CLONE_DESTINATION_SERVICE}" "${VCAP_SERVICES}")}
+    then
+        echo ">> Error, cannot find bucket on service: ${CLONE_DESTINATION_SERVICE}"  >&2
+        return 1
+    fi
+    if ! [[ "${CLONE_MODE}" =~ ^(copy|sync|move)$ ]]
+    then
+        echo ">> Error, service '${CLONE_MODE}' not valid!, only copy|sync|move is allowed!" >&2
+        return 1
+    fi
+    # run rclone server
     (
         echo ">> Launching pid=$$: $cmd $@"
         {
@@ -189,24 +208,14 @@ launch() {
         echo ">> Error launching: '$cmd $@'"  >&2
         return 1
     fi
-    if [ -n "${SYNC_SOURCE_SERVICE}" ] && ! src_bucket=$(get_bucket_from_service "${SYNC_SOURCE_SERVICE}" "${VCAP_SERVICES}")
-    then
-        echo ">> Error, cannot find bucket on service: ${SYNC_SOURCE_SERVICE}"  >&2
-        return 1
-    fi
-    if [ -n "${SYNC_DESTINATION_SERVICE}" ] && ! dst_bucket=$(get_bucket_from_service "${SYNC_DESTINATION_SERVICE}" "${VCAP_SERVICES}")
-    then
-        echo ">> Error, cannot find bucket on service: ${SYNC_DESTINATION_SERVICE}"  >&2
-        return 1
-    fi
     if [ -r "${AUTO_START_ACTIONS}" ]
     then
         [ -x "${AUTO_START_ACTIONS}" ] || chmod a+x "${AUTO_START_ACTIONS}"
         (
             {
                 echo ">> Launching post-start pid=$$: $@"
-                export SYNC_SOURCE_BUCKET="${src_bucket}"
-                export SYNC_DESTINATION_BUCKET="${dst_bucket}"
+                export CLONE_SOURCE_BUCKET="${src_bucket}"
+                export CLONE_DESTINATION_BUCKET="${dst_bucket}"
                 export RCLONE="$cmd"
                 sleep 1
                 ${AUTO_START_ACTIONS}
@@ -218,10 +227,10 @@ launch() {
             {
                 while true
                 do
-                    echo ">> Launching sync job '${SYNC_SOURCE_SERVICE}:${src_bucket}' -> '${SYNC_DESTINATION_SERVICE}:${dst_bucket}', pid=$$"
+                    echo ">> Launching ${CLONE_MODE} job '${CLONE_SOURCE_SERVICE}:${CLONE_SOURCE_BUCKET}' -> '${CLONE_DESTINATION_SERVICE}:${CLONE_DESTINATION_BUCKET}', pid=$$"
                     sleep 1
-                    $cmd -vv rc sync/sync srcFs="${SYNC_SOURCE_SERVICE}:${src_bucket}" dstFs="${SYNC_DESTINATION_SERVICE}:${dst_bucket}"
-                    sleep ${SYNC_TIMER}
+                    $cmd -vv rc sync/${CLONE_MODE} srcFs="${CLONE_SOURCE_SERVICE}:${CLONE_SOURCE_BUCKET}" dstFs="${CLONE_DESTINATION_SERVICE}:${CLONE_DESTINATION_BUCKET}"
+                    [ "${CLONE_TIMER}" == "0" ] && break || sleep ${CLONE_TIMER}
                 done
             }
         ) &
