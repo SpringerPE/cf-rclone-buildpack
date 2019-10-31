@@ -33,8 +33,8 @@ applications:
     AUTH_PASSWORD: "admin"
     CLONE_SOURCE_SERVICE: "jose-rclone-aws"
     CLONE_DESTINATION_SERVICE: "jose-rclone-gcs"
-    CLONE_MODE="sync"
-    CLONE_TIMER=600
+    CLONE_MODE: sync
+    CLONE_TIMER: 600
 ```
 
 With this configuration, the program will run [rclone sync](https://rclone.org/commands/rclone_sync/)
