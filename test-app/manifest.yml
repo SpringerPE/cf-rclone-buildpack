@@ -8,4 +8,12 @@ applications:
   - https://github.com/SpringerPE/cf-rclone-buildpack.git
   env:
     AUTH_USER: "admin"
-    AUTH_PASSWORD: "admin" 
+    AUTH_PASSWORD: "admin"
+#   CLONE_SOURCE_SERVICE: "jose-rclone-gcs"
+#   CLONE_DESTINATION_SERVICE: "jose-rclone-gcs"
+#   CLONE_TIMER: 600
+#   CLONE_MODE: sync
+#  services:
+#  - jose-rclone-gcs
+#  - jose-rclone-aws
+
