@@ -221,7 +221,7 @@ launch() {
                 ${AUTO_START_ACTIONS}
             }
         ) &
-    elif [ -n "${CLONE_SOURCE_BUCKET}" ] && [ -n "${CLONE_DESTINATION_SERVICE}" ]
+    elif [ -n "${CLONE_SOURCE_BUCKET}" ] && [ -n "${CLONE_DESTINATION_BUCKET}" ]
     then
         (
             {
