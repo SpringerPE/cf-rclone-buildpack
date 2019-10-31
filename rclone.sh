@@ -214,14 +214,14 @@ launch() {
         (
             {
                 echo ">> Launching post-start pid=$$: $@"
-                export CLONE_SOURCE_BUCKET="${src_bucket}"
-                export CLONE_DESTINATION_BUCKET="${dst_bucket}"
+                export CLONE_SOURCE_BUCKET="${CLONE_SOURCE_BUCKET}"
+                export CLONE_DESTINATION_BUCKET="${CLONE_DESTINATION_BUCKET}"
                 export RCLONE="$cmd"
                 sleep 1
                 ${AUTO_START_ACTIONS}
             }
         ) &
-    elif [ -n "${dst_bucket}" ] && [ -n "${src_bucket}" ]
+    elif [ -n "${CLONE_SOURCE_BUCKET}" ] && [ -n "${CLONE_DESTINATION_SERVICE}" ]
     then
         (
             {
