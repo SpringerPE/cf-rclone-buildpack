@@ -271,7 +271,7 @@ run_rclone() {
         echo ">> Error, ${APP_VCAP_SERVICES} is not a valid json file!" >&2
         return 1
     else
-        echo "* VCAP_SERVICES: $VCAP_SERVICES"
+        echo "$VCAP_SERVICES" > "${APP_ROOT}/VCAP_SERVICES.final"
     fi
     if ! generate_rclone_config_from_vcap_services "${RCLONE_CONFIG}" "${BINDING_NAME}"
     then
