@@ -249,7 +249,7 @@ run_rclone() {
     if [ -z "${AUTH_PASSWORD}" ]
     then
         AUTH_PASSWORD="$(random_string)"
-        echo "* Generated random password for user ${AUTH_USER}: '${AUTH_PASSWORD}'"
+        echo "* Generated random password for user in ${AUTH_ROOT}/${AUTH_USER}.password"
         echo "${AUTH_PASSWORD}" > "${AUTH_ROOT}/${AUTH_USER}.password"
     fi
     cmd="${cmd} --rc-user ${AUTH_USER} --rc-pass ${AUTH_PASSWORD}"
