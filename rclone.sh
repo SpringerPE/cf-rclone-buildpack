@@ -150,7 +150,7 @@ merge_vcap_services_from_file() {
     local f="${1}"
     local tempf
 
-    if [ -r "${f}"]
+    if [ -r "${f}" ]
     then
         if jq type <<<$(<"${f}") > /dev/null 2>&1
         then
@@ -257,6 +257,8 @@ run_rclone() {
     then
         echo ">> Error, ${APP_VCAP_SERVICES} is not a valid json file!" >&2
         return 1
+    else
+        echo "* VCAP_SERVICES: $VCAP_SERVICES"
     fi
     if ! generate_rclone_config_from_vcap_services "${RCLONE_CONFIG}" "${BINDING_NAME}"
     then
