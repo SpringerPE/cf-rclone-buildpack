@@ -146,7 +146,9 @@ get_bucket_from_service() {
 
 
 random_string() {
-    cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-16} | head -n 1
+    (
+        cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-32} | head -n 1 || true
+    )
 }
 
 
@@ -170,6 +172,7 @@ merge_vcap_services_from_file() {
     fi
     return 0
 }
+
 
 # exec process rclone
 launch() {
@@ -248,7 +251,7 @@ run_rclone() {
     mkdir -p "${AUTH_ROOT}"
     if [ -z "${AUTH_PASSWORD}" ]
     then
-        AUTH_PASSWORD=$(random_string)
+        AUTH_PASSWORD=$(random_string 16)
         echo "* Generated random password for user ${AUTH_USER} in ${AUTH_ROOT}/${AUTH_USER}.password"
         echo "${AUTH_PASSWORD}" > "${AUTH_ROOT}/${AUTH_USER}.password"
     fi
