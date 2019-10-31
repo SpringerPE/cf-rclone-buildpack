@@ -10,7 +10,7 @@ applications:
     AUTH_USER: "admin"
     AUTH_PASSWORD: "admin"
 #   CLONE_SOURCE_SERVICE: "jose-rclone-gcs"
-#   CLONE_DESTINATION_SERVICE: "jose-rclone-gcs"
+#   CLONE_DESTINATION_SERVICE: "jose-rclone-aws"
 #   CLONE_TIMER: 600
 #   CLONE_MODE: sync
 #  services:
