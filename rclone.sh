@@ -16,6 +16,7 @@ export RCLONE_RC_ADDR=":${PORT}"
 export AUTO_START_ACTIONS="${AUTO_START_ACTIONS:-$APP_ROOT/post-start.sh}"
 export BINDING_NAME="${BINDING_NAME:-}"
 export GCS_LOCATION="${GCS_LOCATION:-europe-west4}"
+export GCS_PROJECT_NUMBER="${GCS_PROJECT_NUMBER:-217463809547}"
 
 export CLONE_SOURCE_SERVICE="${CLONE_SOURCE_SERVICE:-}"
 export CLONE_SOURCE_BUCKET="${CLONE_SOURCE_BUCKET:-}"
@@ -78,13 +79,13 @@ set_gcs_rclone_config() {
     do
         jq -r --arg n "${s}" '.[] | select(.name == $n) | .credentials.PrivateKeyData' <<<"${services}" | base64 -d > "${AUTH_ROOT}/${s}-auth.json"
     done
-    jq --arg p "${AUTH_ROOT}" --arg l "${GCS_LOCATION}" -r '.[] |
+    jq --arg pa "${AUTH_ROOT}" --arg l "${GCS_LOCATION}" --arg pn "${GCS_PROJECT_NUMBER}" -r '.[] |
 "["+ .name +"]
 type = google cloud storage
 client_id =
 client_secret =
-project_number =
-service_account_file = "+ $p +"/"+ .name +"-auth.json
+project_number = "+ $pp +"
+service_account_file = "+ $pa +"/"+ .name +"-auth.json
 storage_class = REGIONAL
 location = "+ $l +"
 "' <<<"${services}" >> ${config}
