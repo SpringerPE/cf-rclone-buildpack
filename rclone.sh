@@ -84,7 +84,7 @@ set_gcs_rclone_config() {
 type = google cloud storage
 client_id =
 client_secret =
-project_number = "+ $pp +"
+project_number = "+ $pn +"
 service_account_file = "+ $pa +"/"+ .name +"-auth.json
 storage_class = REGIONAL
 location = "+ $l +"
