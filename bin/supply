@@ -41,3 +41,6 @@ unzip -q "${CACHE_DIR}/rclone-${VERSION_RCLONE}.zip" -d "${RCLONE_DIR}" "*/rclon
 chmod +x "${RCLONE_DIR}/rclone-v${VERSION_RCLONE}-linux-amd64/rclone"
 cd "${RCLONE_DIR}/bin" && ln -sf "../rclone-v${VERSION_RCLONE}-linux-amd64/rclone"
 
+
+cp "${BUILDPACK_DIR}/rclone.sh" "${BUILD_DIR}/.rclone.sh"
+chmod +x "${BUILD_DIR}/.rclone.sh"
