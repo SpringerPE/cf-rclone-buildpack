@@ -245,19 +245,7 @@ launch() {
     return ${rvalue}
 }
 
-
-run_rclone() {
-    local cmd="rclone -v --config "${RCLONE_CONFIG}" --rc-addr ${RCLONE_RC_ADDR}"
-
-    mkdir -p "${AUTH_ROOT}"
-    if [ -z "${AUTH_PASSWORD}" ]
-    then
-        AUTH_PASSWORD=$(random_string 16)
-        echo "* Generated random password for user ${AUTH_USER} in ${AUTH_ROOT}/${AUTH_USER}.password"
-        echo "${AUTH_PASSWORD}" > "${AUTH_ROOT}/${AUTH_USER}.password"
-    fi
-    cmd="${cmd} --rc-user ${AUTH_USER} --rc-pass ${AUTH_PASSWORD}"
-
+configure_rclone() {
     if [ -r "${RCLONE_CONFIG}" ]
     then
         echo >> "${RCLONE_CONFIG}"
@@ -279,27 +267,52 @@ run_rclone() {
         echo ">> Error, service '${BINDING_NAME}' not found!" >&2
         return 1
     fi
-    if [ "x${RCLONE_RC_SERVE}" == "xtrue" ]
+    return 0
+}
+
+run_rclone() {
+    local cmd="rclone -v --config "${RCLONE_CONFIG}" --rc-addr ${RCLONE_RC_ADDR}"
+
+    mkdir -p "${AUTH_ROOT}"
+    if [ -z "${AUTH_PASSWORD}" ]
     then
-        launch "${cmd}" rcd --rc-web-gui --rc-serve $@
-    else
-        launch "${cmd}" rcd --rc-web-gui $@
+        AUTH_PASSWORD=$(random_string 16)
+        echo "* Generated random password for user ${AUTH_USER} in ${AUTH_ROOT}/${AUTH_USER}.password"
+        echo "${AUTH_PASSWORD}" > "${AUTH_ROOT}/${AUTH_USER}.password"
+    fi
+    cmd="${cmd} --rc-user ${AUTH_USER} --rc-pass ${AUTH_PASSWORD}"
+
+    if configure_rclone
+    then
+        if [ "x${RCLONE_RC_SERVE}" == "xtrue" ]
+        then
+            launch "${cmd}" rcd --rc-web-gui --rc-serve $@
+        else
+            launch "${cmd}" rcd --rc-web-gui $@
+        fi
     fi
 }
 
-# run
-if [ -n "${CF_INSTANCE_INDEX}" ]
+
+# Program
+if [ "$0" == "${BASH_SOURCE[0]}" ]
 then
-    if [ ${CF_INSTANCE_INDEX} -eq 0 ]
+    # run
+    if [ -n "${CF_INSTANCE_INDEX}" ]
     then
+        if [ ${CF_INSTANCE_INDEX} -eq 0 ]
+        then
+            run_rclone $@
+            exit $?
+        else
+            echo "ERROR, no more than 1 instance allowed with this buildpack!" >&2
+            exit 1
+        fi
+    else
         run_rclone $@
         exit $?
-    else
-        echo "ERROR, no more than 1 instance allowed with this buildpack!" >&2
-        exit 1
     fi
 else
-    run_rclone $@
-    exit $?
+    # Create a valid conf but not run
+    configure_rclone
 fi
-
